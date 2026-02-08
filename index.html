@@ -1,0 +1,487 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<title>Star Clicker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin:0;
+    padding:0;
+    background: #000;
+    font-family: monospace;
+    color:#7dd3fc;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    height:100vh;
+}
+
+/* Container for game + stars */
+#container {
+    position: relative;
+    width: 500px;
+    height: 650px; /* extra for UI below */
+}
+
+/* Black space behind solar system for twinkling stars */
+#starfield {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    top:0;
+    left:0;
+    pointer-events:none;
+    z-index:0;
+    overflow:hidden;
+}
+
+/* Twinkling stars */
+.star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: twinkle 2s infinite alternate;
+}
+
+@keyframes twinkle {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0.3; }
+}
+
+/* Perfect radial "space" circle */
+#game {
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #000011 0%, #001a33 60%, #000022 100%);
+    position: relative;
+    overflow: hidden;
+    margin:0 auto;
+    z-index:1;
+}
+
+/* Sun/Star */
+#star {
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, yellow, orange);
+    border-radius: 50%;
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    box-shadow: 0 0 20px yellow;
+    z-index:10;
+}
+
+/* Orbits */
+.orbit {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    animation: spin linear infinite;
+    pointer-events: none;
+}
+
+/* Planets */
+.planet {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    position: absolute;
+}
+
+/* Space stations */
+.space-station {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    background: cyan;
+}
+
+/* Asteroid belt */
+.asteroid-belt {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    animation: spin 25s linear infinite;
+    pointer-events: none;
+}
+.asteroid {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    position: absolute;
+}
+
+/* Comet */
+#comet {
+    position: absolute;
+    width: 40px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    display: none;
+    z-index: 20;
+}
+
+/* Top stats */
+#stats {
+    position: absolute;
+    top: 5px;
+    left:50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index:20;
+}
+
+/* Floating shop and perks below the game */
+#shop-container {
+    position: absolute;
+    top: 510px; /* BELOW game circle */
+    left:50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index:50;
+}
+
+#shop-container button {
+    background: #1c2541;
+    color: #7dd3fc;
+    border: 1px solid #7dd3fc;
+    padding: 8px 14px;
+    font-family: monospace;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Perk buttons */
+#perk-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.perk-container-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.perk-circle {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid #7dd3fc;
+    cursor: pointer;
+    line-height: 60px;
+    font-size: 24px;
+    vertical-align: middle;
+    transition: opacity 0.3s;
+}
+
+.small-text {
+    font-size: 12px;
+    color:#7dd3fc;
+    text-align: center;
+}
+
+@keyframes spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+</style>
+<link rel="stylesheet" href="style.css"></head>
+<body>
+<div id="container">
+    <!-- Black space for stars -->
+    <div id="starfield"></div>
+
+    <!-- Game Area -->
+    <div id="game">
+        <div id="star"></div>
+        <div id="comet"></div>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats">
+        <div id="points">Points: 0</div>
+        <div id="perClick">Per Click: 1</div>
+        <div id="perSecond">Per Second: 0</div>
+    </div>
+
+    <!-- Shop and Perks -->
+    <div id="shop-container">
+        <h2 id="shopTitle">🪐 Planet Shop</h2>
+        <button id="buyButton">Buy Planet (Cost: 10)</button>
+        <div id="perk-container">
+            <div class="perk-container-item">
+                <div class="perk-circle" id="space-station-perk">🛰</div>
+                <small class="small-text" id="space-station-text">Space Station: Orbits a planet (5M, 10min cooldown)</small>
+            </div>
+            <div class="perk-container-item">
+                <div class="perk-circle" id="comet-perk">☄️</div>
+                <small class="small-text" id="comet-text">Comet Spotter: Click comet to double income (2.5M, 10min cooldown)</small>
+            </div>
+            <div class="perk-container-item">
+                <div class="perk-circle" id="click-multiplier-perk">✖️2</div>
+                <small class="small-text" id="click-multiplier-text">Click ×2 for 5min (1M, 10min cooldown)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// =================== Generate Twinkling Stars ===================
+const starfield = document.getElementById("starfield");
+for(let i=0;i<100;i++){
+    const star = document.createElement("div");
+    star.className="star";
+    star.style.left=Math.random()*500+"px";
+    star.style.top=Math.random()*500+"px";
+    star.style.width=1+Math.random()*2+"px";
+    star.style.height=star.style.width;
+    star.style.animationDuration=1+Math.random()*2+"s";
+    // Ignore stars in the inner blue circle (radius 250)
+    const dx = parseFloat(star.style.left)-250;
+    const dy = parseFloat(star.style.top)-250;
+    if(Math.sqrt(dx*dx+dy*dy)<250) { i--; continue; } // retry position
+    starfield.appendChild(star);
+}
+
+// =================== Game Variables ===================
+let points = 0;
+let perClick = 1;
+let perSecond = 0;
+let planets = 0;
+let planetCost = 10;
+let asteroids = 0;
+const maxPlanets = 10;
+const maxAsteroids = 1000;
+
+let spaceStations = 0;
+const maxSpaceStations = 10;
+let spaceStationPurchased = Array(maxPlanets).fill(false);
+
+let clickMultiplierActive = false;
+
+const pointsDisplay = document.getElementById("points");
+const perClickDisplay = document.getElementById("perClick");
+const perSecondDisplay = document.getElementById("perSecond");
+const buyButton = document.getElementById("buyButton");
+const shopTitle = document.getElementById("shopTitle");
+const game = document.getElementById("game");
+const perkContainer = document.getElementById("perk-container");
+const cometEl = document.getElementById("comet");
+
+let asteroidBelt = null;
+let cooldowns = { spaceStation:0, comet:0, clickMultiplier:0 };
+
+// =================== Functions ===================
+function getAsteroidCost(){
+    if(asteroids<10) return 100000;
+    const extra = asteroids -10;
+    return Math.min(100000 + extra*25000, 1000000);
+}
+
+function updateUI(){
+    pointsDisplay.textContent = "Points: "+Math.floor(points);
+    perClickDisplay.textContent = "Per Click: "+perClick;
+    perSecondDisplay.textContent = "Per Second: "+perSecond;
+
+    if(planets<maxPlanets){
+        buyButton.textContent = `Buy Planet (Cost: ${planetCost})`;
+        buyButton.disabled = points<planetCost;
+        perkContainer.style.display="none";
+    } else {
+        shopTitle.textContent="☄️ Asteroid Belt";
+        const cost=getAsteroidCost();
+        buyButton.textContent=`Buy Asteroid (Cost: ${cost.toLocaleString()})`;
+        buyButton.disabled=points<cost || asteroids>=maxAsteroids;
+        perkContainer.style.display="flex";
+    }
+}
+
+// =================== Star Click ===================
+document.getElementById("star").addEventListener("click", ()=>{
+    points += perClick;
+    updateUI();
+});
+
+// =================== Buy Planets / Asteroids ===================
+buyButton.addEventListener("click", ()=>{
+    if(planets<maxPlanets){
+        if(points<planetCost) return;
+        points -= planetCost;
+        planets++;
+        if(planets===1) perClick*=10; else perClick+=2;
+        perSecond += 100;
+
+        const orbit = document.createElement("div");
+        orbit.className = "orbit";
+        orbit.style.animationDuration = `${6+planets*2}s`;
+
+        const planet = document.createElement("div");
+        planet.className = "planet";
+        planet.style.background=`hsl(${planets*36},80%,60%)`;
+
+        // Planets closer to Sun
+        const radius = 30 + planets*6;
+        planet.style.left = `50%`;
+        planet.style.top = `${50 - radius/250*100}%`;
+        planet.style.transform = "translate(-50%,0)";
+        orbit.appendChild(planet);
+        game.appendChild(orbit);
+
+        planetCost = Math.floor(planetCost*2.2);
+    } else {
+        const cost = getAsteroidCost();
+        if(points<cost || asteroids>=maxAsteroids) return;
+        points -= cost;
+        asteroids++;
+        perSecond += 1000;
+
+        if(!asteroidBelt){
+            asteroidBelt = document.createElement("div");
+            asteroidBelt.className = "asteroid-belt";
+            game.appendChild(asteroidBelt);
+        }
+
+        const asteroid = document.createElement("div");
+        asteroid.className = "asteroid";
+        asteroid.style.background=Math.random()<0.5?"#9ca3af":"#92400e";
+
+        const angle = Math.random()*Math.PI*2;
+        const radius = 170 + Math.random()*20;
+        asteroid.style.left = 250 + Math.cos(angle)*radius + "px";
+        asteroid.style.top = 250 + Math.sin(angle)*radius + "px";
+        asteroidBelt.appendChild(asteroid);
+    }
+    updateUI();
+});
+
+// =================== Passive Income ===================
+setInterval(()=>{
+    points += perSecond;
+    updateUI();
+},1000);
+
+// =================== Perks ===================
+// (same as before)
+const spaceStationPerk = document.getElementById("space-station-perk");
+const cometPerk = document.getElementById("comet-perk");
+const clickMultiplierPerk = document.getElementById("click-multiplier-perk");
+
+const spaceText = document.getElementById("space-station-text");
+const cometText = document.getElementById("comet-text");
+const clickText = document.getElementById("click-multiplier-text");
+
+spaceStationPerk.addEventListener("click",()=>{
+    const now = Date.now();
+    if(points<5000000 || cooldowns.spaceStation>now || spaceStations>=maxSpaceStations) return;
+
+    let planetIndex = spaceStationPurchased.findIndex(p=>!p);
+    if(planetIndex===-1) return;
+
+    points -= 5000000;
+    spaceStationPurchased[planetIndex]=true;
+    spaceStations++;
+    cooldowns.spaceStation = now + 10*60*1000;
+
+    const orbit = document.createElement("div");
+    orbit.className = "orbit";
+    orbit.style.animationDuration = `${3+planetIndex}s`;
+
+    const station = document.createElement("div");
+    station.className = "space-station";
+    const radius = 30 + (planetIndex+1)*6;
+    station.style.left = "50%";
+    station.style.top = `${50 - radius/250*100}%`;
+    station.style.transform = "translate(-50%,0)";
+    orbit.appendChild(station);
+    game.appendChild(orbit);
+
+    if(spaceStations===maxSpaceStations){
+        perSecond += maxPlanets*2000;
+        perClick *=10;
+    }
+});
+
+cometPerk.addEventListener("click",()=>{
+    const now=Date.now();
+    if(points<2500000 || cooldowns.comet>now) return;
+
+    points -= 2500000;
+    cooldowns.comet = now + 10*60*1000;
+
+    cometEl.style.display="block";
+    cometEl.style.left="-50px";
+    cometEl.style.top=Math.random()*400+"px";
+
+    let speed = 2;
+    let cometInterval = setInterval(()=>{
+        let left = parseFloat(cometEl.style.left);
+        if(left>500){ cometEl.style.display="none"; clearInterval(cometInterval);}
+        else cometEl.style.left = left+speed+"px";
+    },16);
+
+    cometEl.onclick = ()=>{
+        perClick *=2;
+        perSecond *=2;
+        cometEl.style.display="none";
+        clearInterval(cometInterval);
+    }
+});
+
+clickMultiplierPerk.addEventListener("click",()=>{
+    const now = Date.now();
+    if(points<1000000 || cooldowns.clickMultiplier>now || clickMultiplierActive) return;
+
+    points -= 1000000;
+    cooldowns.clickMultiplier = now + 10*60*1000;
+    clickMultiplierActive = true;
+
+    perClick *=2;
+    setTimeout(()=>{ perClick/=2; clickMultiplierActive=false; },5*60*1000);
+});
+
+// =================== Cooldown Display ===================
+setInterval(()=>{
+    const now=Date.now();
+    const perks=[
+        {el:spaceStationPerk,textEl:spaceText,key:'spaceStation',desc:'Space Station: Orbits a planet (5M, 10min cooldown)'},
+        {el:cometPerk,textEl:cometText,key:'comet',desc:'Comet Spotter: Click comet to double income (2.5M, 10min cooldown)'},
+        {el:clickMultiplierPerk,textEl:clickText,key:'clickMultiplier',desc:'Click ×2 for 5min (1M, 10min cooldown)'}
+    ];
+    perks.forEach(p=>{
+        let remaining = Math.max(0, cooldowns[p.key]-now);
+        if(remaining>0){
+            p.el.style.opacity=0.5;
+            const mins = Math.floor(remaining/60000);
+            const secs = Math.floor((remaining%60000)/1000);
+            p.textEl.textContent = `Cooldown: ${mins}:${secs.toString().padStart(2,'0')}`;
+        } else{
+            p.el.style.opacity=1;
+            p.textEl.textContent = p.desc;
+        }
+    });
+},1000);
+
+updateUI();
+</script>
+
+<script src="script.js"></script><script src="sw.js"></script></body></html>
